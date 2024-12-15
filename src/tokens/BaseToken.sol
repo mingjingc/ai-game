@@ -2,10 +2,9 @@
 pragma solidity ^0.8.13;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Errors} from "../libraries/Errors.sol";
 import {IBaseToken} from "../interfaces/IBaseToken.sol";
 
-contract BaseToken is ERC20, Ownable, IBaseToken {
+abstract contract BaseToken is ERC20, Ownable, IBaseToken {
     address public admin;
     constructor(
         string memory name,
@@ -18,7 +17,7 @@ contract BaseToken is ERC20, Ownable, IBaseToken {
 
     modifier onlyAdmin() {
         if (msg.sender != admin) {
-            revert Errors.PermissionDenied();
+            revert PermissionDeniedErr();
         }
         _;
     }

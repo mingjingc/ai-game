@@ -11,4 +11,7 @@ interface IBaseToken is IERC20 {
     function admin() external view returns (address);
 
     event AdminChanged(address oldAdmin, address newAdmin);
+
+    // errors define
+    error PermissionDeniedErr();
 }
