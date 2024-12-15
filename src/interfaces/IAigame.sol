@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IBaseToken} from "./IBaseToken.sol";
+import {IAifeeProtocol} from "./IAifeeProtocol.sol";
 
 interface IAigame {
     struct Game {
@@ -20,9 +23,26 @@ interface IAigame {
       mapping (address=> mapping(address=>uint256))  userStakeAmounts;
     }
 
+    function createGameRound(uint256 endTime,address[] memory aiAgentList, uint256 initAimo) external;
+    function stake(uint256 amount, address aiAgent) external;
+    function setGameWinner(uint256 round_, address winner) external;
+
+    // user claim prize
+    function claimPrizes(address user,uint256[] calldata roundList) external;
+    function claimPrize(address user, uint256 round_) external;
+
+    // readers
+    function getGameBaseInfo(uint256 round_) external view returns (uint256, uint256, uint256, uint256, address);
+    function getUserStakeAmount(address user, uint256 round_) external view returns (uint256);
+    function getAiAgentStakeAmount(address aiAgent, uint256 round_) external view returns (uint256);
+    function usdt() external view returns (IERC20);
+    function aimo() external view returns (IBaseToken);
+    function aifeeProtocol() external view returns (IAifeeProtocol);
+
     event TransferAimoInGame(address indexed from, address indexed to, uint256 amount,bytes noteDate);
     event Staked(uint256 indexed round, address indexed user, uint256 amount, uint256 fee);
     event GameWinnerSet(uint256 indexed round, address indexed winner);
+    event GameCreated(uint256 indexed round, uint256 endTime, address[] aiAgentList, uint256 initAimo);
 
     // errors define
     error NoGameErr();
@@ -30,7 +50,7 @@ interface IAigame {
     error GameNotEndErr(uint256 round);
     error CannotStakeAiAgent(uint256 round, address aiAgent);
 
-    error NoAiAgentErr();
+    error NotAiAgentErr();
     error NotEnoughAimoErr(address);
     error GameWinnerAlreadySetErr(uint256 round);
     error GameWinnerNotSetErr(uint256  round);

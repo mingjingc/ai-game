@@ -32,6 +32,8 @@ contract Aigame is IAigame, Ownable {
       game.isAiAgent[aiAgent] = true;
       game.aiAgentAimoBalances[aiAgent] = initAimo;
     }
+
+    emit GameCreated(round, endTime, aiAgentList, initAimo);
   }
 
   //  只能押注本轮
@@ -44,7 +46,7 @@ contract Aigame is IAigame, Ownable {
       revert GameEndedErr(round);
     }
     if (game.isAiAgent[aiAgent] == false) {
-      revert NoAiAgentErr();
+      revert NotAiAgentErr();
     }
     if (_checkCanStake(game.totalStakeAmount, game.aiAgentSakeAmounts[aiAgent]) == false) {
       revert CannotStakeAiAgent(round, aiAgent);
@@ -95,6 +97,9 @@ contract Aigame is IAigame, Ownable {
     if (game.endTime >= block.timestamp) {
       revert GameNotEndErr(round_);
     }
+    if (game.isAiAgent[winner] == false) {
+      revert NotAiAgentErr();
+    }
 
     if (game.winner != address(0)) {
       revert GameWinnerAlreadySetErr(round_);
@@ -117,6 +122,23 @@ contract Aigame is IAigame, Ownable {
     _claimPrize(user, game);
   }
 
+
+  //=======================readers=================
+  function getGameBaseInfo(uint256 round_) external view returns (uint256, uint256, uint256, uint256, address) {
+    Game storage game  = games[round_];
+    return (game.round, game.endTime, game.initAimo, game.totalStakeAmount, game.winner);
+  }
+  function getUserStakeAmount(address user, uint256 round_) external view returns (uint256) {
+    Game storage game = games[round_];
+    return game.userStakeAmounts[user][game.winner];
+  }
+  function getAiAgentStakeAmount(address aiAgent, uint256 round_) external view returns (uint256) {
+    Game storage game = games[round_];
+    return game.aiAgentSakeAmounts[aiAgent];
+  }
+
+
+  //=====================internal=======================
   function _claimPrize(address user,Game storage game) internal {
     if (game.endTime == 0) {
       revert NoGameErr();

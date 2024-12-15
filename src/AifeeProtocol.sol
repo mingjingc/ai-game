@@ -23,18 +23,18 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
     mapping(address => address) public inviters;
 
     constructor(
-        address _owner,
+        address owner_,
         address feeToken_,
-        uint256 _feeRate,
-        uint256 _inviterIncomeRate
-    ) Ownable(_owner) EIP712("AifeeProtocol", "1") {
+        uint256 feeRate_,
+        uint256 inviterIncomeRate_
+    ) Ownable(owner_) EIP712("AifeeProtocol", "1") {
         feeToken = feeToken_;
-        feeRate = _feeRate;
-        inviterIncomeRate = _inviterIncomeRate;
+        feeRate = feeRate_;
+        inviterIncomeRate = inviterIncomeRate_;
     }
 
-    function calcuateFee(uint256 stakeAmount) external view returns (uint256) {
-        return stakeAmount * feeRate / rateBase;
+    function updateFeeRate(uint256 feeRate_) external onlyOwner {
+        feeRate = feeRate_;
     }
 
     function collectFee(address token, address user, uint256 amount) external {
@@ -52,6 +52,7 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
     }
 
     // user is invitee
+    // 绑定邀请人, 只能调用一次，需要收腰人的签名
     function inviteUser(address user,uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
         if (deadline < block.timestamp) {
             revert ERC2612ExpiredSignatureErr(deadline);
@@ -72,9 +73,15 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
         inviters[user] = inviter;
     }
 
-    function claimIncome() external {
-        uint256 amount = inviterIncome[msg.sender];
-        inviterIncome[msg.sender] = 0;
+    function claimIncome(address user) external {
+        uint256 amount = inviterIncome[user];
+        inviterIncome[user] = 0;
         IERC20(feeToken).transfer(msg.sender, amount);
+    }
+
+
+    //==========================readers=====================
+    function calcuateFee(uint256 stakeAmount) external view returns (uint256) {
+        return stakeAmount * feeRate / rateBase;
     }
 }
