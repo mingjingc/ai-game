@@ -13,6 +13,8 @@ interface IAigame {
       uint256 totalStakeAmount; // 本局总押注金额 
       address winner; // which ai agent is winner
 
+      // ai agent 列表
+      address[] aiAgentList;
       mapping (address => bool) isAiAgent;
       // Ai agent 本局的奖金池, USDT
       mapping(address => uint256)  aiAgentSakeAmounts; // Ai agent 本局的stake amount
@@ -21,6 +23,9 @@ interface IAigame {
 
       // 用户本局押注金额给ai agent, USDT
       mapping (address=> mapping(address=>uint256))  userStakeAmounts;
+
+      mapping (address=> bool)  hasClaimedPrize; // stake win
+      mapping (address=> bool) hasClaimedAimo; // stake failed
     }
 
     function createGameRound(uint256 endTime,address[] memory aiAgentList, uint256 initAimo) external;
@@ -55,4 +60,7 @@ interface IAigame {
     error GameWinnerAlreadySetErr(uint256 round);
     error GameWinnerNotSetErr(uint256  round);
     error NoUserGamePrizeErr(address user, uint256 round);
+
+    error HasClaimedPrizeErr(address user, uint256 round);
+    error HasClaimedAimoErr(address user, uint256 round);
 }

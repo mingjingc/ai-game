@@ -31,6 +31,7 @@ contract Aigame is IAigame, Ownable {
       address aiAgent = aiAgentList[i];
       game.isAiAgent[aiAgent] = true;
       game.aiAgentAimoBalances[aiAgent] = initAimo;
+      game.aiAgentList = aiAgentList;
     }
 
     emit GameCreated(round, endTime, aiAgentList, initAimo);
@@ -146,18 +147,46 @@ contract Aigame is IAigame, Ownable {
     if (game.winner == address(0)) {
       revert GameWinnerNotSetErr(game.round);
     }
+    if (game.hasClaimedPrize[user]) {
+      revert HasClaimedPrizeErr(user, game.round);
+    }
+    game.hasClaimedPrize[user] = true;
 
     uint256 prize = _calculateUserPrize(game.userStakeAmounts[user][game.winner], 
                         game.aiAgentSakeAmounts[game.winner], game.totalStakeAmount);
     if (prize == 0) {
       return;
     }
-    game.userStakeAmounts[msg.sender][game.winner] = 0;
-    usdt.transfer(msg.sender, prize);
+    usdt.transfer(user, prize);
+  }
+
+  // 如果失败, 领取Aimo作为安慰奖
+  function _claimAimo(address user, Game storage game) internal {
+    address winner = game.winner;
+    if (winner == address(0)) {
+      revert GameWinnerNotSetErr(game.round);
+    }
+    if (game.hasClaimedAimo[user]) {
+      revert HasClaimedAimoErr(user, game.round);
+    }
+    game.hasClaimedAimo[user] = true;
+
+    uint256 totalPrize = 0;
+    for(uint256 i = 0; i < game.aiAgentList.length; i++) {
+      address aiAgent = game.aiAgentList[i];
+      uint256 prize = _calculateUserGotAimo(game.userStakeAmounts[user][aiAgent],
+                        game.aiAgentSakeAmounts[aiAgent], game.aiAgentAimoBalances[aiAgent]);
+      totalPrize += prize;
+    }
+    aimo.mint(user, totalPrize);
+  }
+
+  function _calculateUserGotAimo(uint256 userStakeAmount, uint256 agentAiStakeAmount, uint256 agentAiAimo) internal pure returns (uint256) {
+    return userStakeAmount * agentAiAimo / agentAiStakeAmount;
   }
 
   function _calculateUserPrize(uint256 userStakeAmount, uint256 agentAiStakeAmount, uint256 gameStakeAmount) internal pure returns (uint256) {
-    return userStakeAmount / agentAiStakeAmount * gameStakeAmount;
+    return userStakeAmount * gameStakeAmount / agentAiStakeAmount;
   }
 
   function _checkCanStake(uint256 totalStakeAmount, uint256 aiAgentStakeAmount) internal view returns (bool) {
