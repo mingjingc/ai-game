@@ -16,7 +16,7 @@ contract DeployBaseSepoliaTestnet is Script {
         USDT usdt = new USDT();
         console.log("USDT deployed at: ", address(usdt));
 
-        Aimo aimo = new Aimo(owner, owner);
+        Aimo aimo = new Aimo(owner);
         console.log("Aimo deployed at: ", address(aimo));
 
         AifeeProtocol aifeeProtocol = new AifeeProtocol(

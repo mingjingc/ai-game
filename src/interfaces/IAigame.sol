@@ -35,11 +35,14 @@ interface IAigame {
     // user claim prize
     function claimPrizes(address user,uint256[] calldata roundList) external;
     function claimPrize(address user, uint256 round_) external;
+    function claimAimo(address user, uint256 round_) external;
+    function claimAimos(address user, uint256[] calldata rounds) external;
 
     // readers
     function getGameBaseInfo(uint256 round_) external view returns (uint256, uint256, uint256, uint256, address);
     function getUserStakeAmount(address user, uint256 round_) external view returns (uint256);
     function getAiAgentStakeAmount(address aiAgent, uint256 round_) external view returns (uint256);
+    function getAiAgentAimoBalance(address aiAgent, uint256 round_) external view returns (uint256);
     function usdt() external view returns (IERC20);
     function aimo() external view returns (IBaseToken);
     function aifeeProtocol() external view returns (IAifeeProtocol);

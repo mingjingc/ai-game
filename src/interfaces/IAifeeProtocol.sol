@@ -11,6 +11,8 @@ interface IAifeeProtocol {
   function inviteUser(address user,uint256 deadline, uint8 v, bytes32 r, bytes32 s) external;
   function claimIncome(address user) external;
 
+  event ClaimedIncome(address indexed user, uint256 amount);
+
   error FeeTokenNotSupportedErr();
   error UserNotAggreeInvitationErr();
   error ERC2612ExpiredSignatureErr(uint256 deadline);

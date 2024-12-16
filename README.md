@@ -1,66 +1,43 @@
-## Foundry
+## Ai-game contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+![](./images/overview.png)
+Ai-game is an decentralized game platform. User can stake USDT to their interested bots. Once the bot is win, users can divide the prize pool.
 
-Foundry consists of:
+## Installation
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- Install foundry
 
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+```
+curl -L https://foundry.paradigm.xyz | bash
 ```
 
-### Test
+- Install dependencies
 
-```shell
-$ forge test
+```
+forge install
 ```
 
-### Format
+## Compile
 
-```shell
-$ forge fmt
+```
+forge compile
 ```
 
-### Gas Snapshots
+## deploy and verify
 
-```shell
-$ forge snapshot
+set environment variables
+
+```
+export PRIVATE_KEY=""
+export RPC_URL=""
+export ETHERSCAN_API_KEY=""
+export VERIFIER_URL="https://api-sepolia.basescan.org/api"
 ```
 
-### Anvil
+deploy and verify on base sepolia testnet
 
-```shell
-$ anvil
 ```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+forge script script/Deploy-base-sepolia-testnet.sol:DeployBaseSepoliaTestnet \
+--chain base-goerli  --verifier-url $VERIFIER_URL \
+--rpc-url $RPC_URL  --private-key $PRIVATE_KEY --broadcast --verify
 ```

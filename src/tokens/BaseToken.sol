@@ -9,10 +9,8 @@ abstract contract BaseToken is ERC20, Ownable, IBaseToken {
     constructor(
         string memory name,
         string memory symbol,
-        address owner_,
-        address admin_
+        address owner_
     ) ERC20(name, symbol) Ownable(owner_) {
-        admin = admin_;
     }
 
     modifier onlyAdmin() {

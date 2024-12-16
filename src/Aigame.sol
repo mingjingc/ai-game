@@ -14,12 +14,20 @@ contract Aigame is IAigame, Ownable {
   mapping(uint256 => Game) private games;
   uint256 public round;
 
+  // @param aifeeProtocol 手续费协议合约地址
+  // @param usdt USDT合约地址
+  // @param aimo Aimo合约地址
+  // @param owner 管理员地址
   constructor(address aifeeProtocol_,address usdt_, address aimo_, address owner_) Ownable(owner_) {
     aifeeProtocol = IAifeeProtocol(aifeeProtocol_);
     usdt = IERC20(usdt_);
     aimo = IBaseToken(aimo_);
   }
 
+  // 管理员创建一局游戏，
+  // @param endTime 游戏结束时间
+  // @param aiAgentList 参与游戏的bot
+  // @param initAimo 每个bot初始的Aimo数量
   function createGameRound(uint256 endTime,address[] memory aiAgentList, uint256 initAimo) external onlyOwner {
     ++round;
   
@@ -37,7 +45,9 @@ contract Aigame is IAigame, Ownable {
     emit GameCreated(round, endTime, aiAgentList, initAimo);
   }
 
-  //  只能押注本轮
+  //  用户押注某个bot，只能押注本轮
+  // @param amount 押注金额
+  // @param aiAgent 押注的bot
   function stake(uint256 amount, address aiAgent) external {
     Game storage game = games[round];
     if (game.endTime == 0) {
@@ -70,6 +80,7 @@ contract Aigame is IAigame, Ownable {
     emit Staked(round, msg.sender, amount, fee);
   }
 
+  // bot之间转账，noteData为转账备注
   function transferAimoInGame(uint256 amount, address to, bytes memory noteData) external  {
     Game storage game = games[round];
     if (game.endTime == 0) {
@@ -90,6 +101,7 @@ contract Aigame is IAigame, Ownable {
     emit TransferAimoInGame(msg.sender, to, amount, noteData);
   }
 
+  // 在游戏结束后，管理员可以设置游戏胜利bot
   function setGameWinner(uint256 round_, address winner) external onlyOwner {
     Game storage game = games[round_];
     if (game.endTime == 0) {
@@ -110,6 +122,7 @@ contract Aigame is IAigame, Ownable {
     emit GameWinnerSet(round_, winner);
   }
 
+  // 押注胜利者可以领取 USDT 奖金
   function claimPrizes(address user,uint256[] calldata roundList) external {
     for (uint256 i = 0; i < roundList.length; i++) {
       uint256 r = roundList[i];
@@ -121,6 +134,19 @@ contract Aigame is IAigame, Ownable {
   function claimPrize(address user, uint256 round_) external {
     Game storage game = games[round_];
     _claimPrize(user, game);
+  }
+
+  // 押注失败者可以领取 Aimo 安慰奖金
+  function claimAimo(address user, uint256 round_) external {
+    Game storage game = games[round_];
+    _claimAimo(user, game);
+  }
+  function claimAimos(address user, uint256[] calldata rounds) external {
+    for (uint256 i = 0; i < rounds.length; i++) {
+      uint256 r = rounds[i];
+      Game storage game = games[r];
+      _claimAimo(user, game);
+    }
   }
 
 
@@ -136,6 +162,10 @@ contract Aigame is IAigame, Ownable {
   function getAiAgentStakeAmount(address aiAgent, uint256 round_) external view returns (uint256) {
     Game storage game = games[round_];
     return game.aiAgentSakeAmounts[aiAgent];
+  }
+  function getAiAgentAimoBalance(address aiAgent, uint256 round_) external view returns (uint256) {
+    Game storage game = games[round_];
+    return game.aiAgentAimoBalances[aiAgent];
   }
 
 
