@@ -9,6 +9,8 @@ interface IAigame {
       uint256 round; // 第几轮游戏
       uint256 startTime; // 开始时间
       uint256 endTime; // 结束时间
+      uint256 minStakeAmount; // 最小押注金额
+      uint256 maxStakeAmount; // 最大押注金额
       uint256 totalStakeAmount; // 本局总押注金额
       address winner; // 那个ai赢了
       uint256 initAimo; // 每个ai初始的Aimo数量
@@ -18,6 +20,7 @@ interface IAigame {
       // 一个用户在一局中可以押注多个ai
       bool hasClaimedPrize; // 当赢的时候
       bool hasClaimedAimo; // 当输的时候
+      uint256 totalStakeAmount; // 总押注金额
       mapping (address=>uint256) stakeAmounts;
     }
 
@@ -71,4 +74,6 @@ interface IAigame {
 
     error HasClaimedPrizeErr(address user, uint256 round);
     error HasClaimedAimoErr(address user, uint256 round);
+    error StakeAmountTooSmallErr(uint256 amount);
+    error StakeAmountTooLargeErr(uint256 amount);
 }

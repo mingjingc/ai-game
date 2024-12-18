@@ -10,6 +10,8 @@ contract Aigame is IAigame, Ownable {
   IERC20 public usdt;
   IBaseToken public aimo; // Aimo token
   IAifeeProtocol public aifeeProtocol;
+  uint256 minStakeAmount = 10 * 1e6;
+  uint256 maxStakeAmount = 5000 * 1e6;
 
   mapping(uint256 => Game) private games;
   uint256 public round;
@@ -63,6 +65,12 @@ contract Aigame is IAigame, Ownable {
     UserInfo storage userInfo = game.userMap[msg.sender]; // 获取本轮游戏的用户信息
     address user = msg.sender; // 押注的用户地址
 
+    if (userInfo.totalStakeAmount+amount > maxStakeAmount) {
+      revert StakeAmountTooLargeErr(userInfo.totalStakeAmount+amount);
+    }
+    if (amount < minStakeAmount) {
+      revert StakeAmountTooSmallErr(amount);
+    }
     if (aiInfo.addr == address(0)) {
       revert NotAiErr();
     }
@@ -92,7 +100,9 @@ contract Aigame is IAigame, Ownable {
       baseInfo.totalStakeAmount += amount;
       aiInfo.stakeAmount += amount;
       userInfo.stakeAmounts[ai] += amount;
+      userInfo.totalStakeAmount += amount;
     }
+    
     emit Staked(round, user, amount, fee);
   }
 
