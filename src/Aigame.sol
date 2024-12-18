@@ -28,74 +28,97 @@ contract Aigame is IAigame, Ownable {
   // @param endTime 游戏结束时间
   // @param aiAgentList 参与游戏的bot
   // @param initAimo 每个bot初始的Aimo数量
-  function createGameRound(uint256 endTime,address[] memory aiAgentList, uint256 initAimo) external onlyOwner {
+  function createGameRound(uint256 startTime, uint256 endTime,address[] memory aiList, uint256 initAimo) external onlyOwner {
     ++round;
   
     Game storage game = games[round];
-    game.round = round;
-    game.endTime = endTime;
-    game.initAimo = initAimo;
-    for(uint256 i = 0; i < aiAgentList.length; i++) {
-      address aiAgent = aiAgentList[i];
-      game.isAiAgent[aiAgent] = true;
-      game.aiAgentAimoBalances[aiAgent] = initAimo;
-      game.aiAgentList = aiAgentList;
+    // 初始化游戏基本信息
+    GameBaseInfo storage baseInfo = game.baseInfo;
+    baseInfo.round = round;
+    baseInfo.startTime = startTime;
+    baseInfo.endTime = endTime;
+    baseInfo.initAimo = initAimo;
+    baseInfo.aiList = aiList;
+    // 初始化ai信息
+    mapping(address=> AiInfo) storage aiMap = game.aiMap;
+    for(uint256 i = 0; i < aiList.length; i++) {
+      address ai = aiList[i];
+      AiInfo storage aiInfo = aiMap[ai];
+
+      aiInfo.addr = ai;
+      aiInfo.stakeAmount = 0;
+      aiInfo.aimoBalance = initAimo;
     }
 
-    emit GameCreated(round, endTime, aiAgentList, initAimo);
+    emit GameCreated(round, startTime, endTime, aiList, initAimo);
   }
 
   //  用户押注某个bot，只能押注本轮
   // @param amount 押注金额
   // @param aiAgent 押注的bot
-  function stake(uint256 amount, address aiAgent) external {
-    Game storage game = games[round];
-    if (game.endTime == 0) {
+  function stake(uint256 amount, address ai) external {
+    Game storage game = games[round]; // 获取本轮游戏
+    AiInfo storage aiInfo = game.aiMap[ai]; // 获取本轮游戏的ai信息
+    GameBaseInfo storage baseInfo = game.baseInfo; // 本轮游戏基本信息
+    UserInfo storage userInfo = game.userMap[msg.sender]; // 获取本轮游戏的用户信息
+    address user = msg.sender; // 押注的用户地址
+
+    if (aiInfo.addr == address(0)) {
+      revert NotAiErr();
+    }
+    if (baseInfo.round == 0) {
       revert NoGameErr();
     }
-    if (game.endTime < block.timestamp) {
-      revert GameEndedErr(round);
+    if (baseInfo.endTime < block.timestamp || baseInfo.startTime > block.timestamp) {
+      revert GameEndOrNotStartErr(round);
     }
-    if (game.isAiAgent[aiAgent] == false) {
-      revert NotAiAgentErr();
+    if (aiInfo.addr == address(0)) {
+      revert NotAiErr();
     }
-    if (_checkCanStake(game.totalStakeAmount, game.aiAgentSakeAmounts[aiAgent]) == false) {
-      revert CannotStakeAiAgent(round, aiAgent);
+    if (_checkCanStake(baseInfo.totalStakeAmount, aiInfo.stakeAmount) == false) {
+      revert CannotStakeAiAgent(round, ai);
     }
 
-    usdt.transferFrom(msg.sender, address(this), amount);
+    usdt.transferFrom(user, address(this), amount);
     uint256 fee = aifeeProtocol.calcuateFee(amount);
     if (fee > 0) {
       // 手续费协议收取手续费
-      aifeeProtocol.collectFee(address(usdt), msg.sender, fee);
+      aifeeProtocol.collectFee(address(usdt), user, fee);
     }
     amount = amount - fee; // 扣除手续费, 实际押注的金额
 
 
     unchecked {
-      game.totalStakeAmount += amount;
-      game.aiAgentSakeAmounts[aiAgent] += amount;
-      game.userStakeAmounts[msg.sender][aiAgent] += amount;
+      baseInfo.totalStakeAmount += amount;
+      aiInfo.stakeAmount += amount;
+      userInfo.stakeAmounts[ai] += amount;
     }
-    emit Staked(round, msg.sender, amount, fee);
+    emit Staked(round, user, amount, fee);
   }
 
   // bot之间转账，noteData为转账备注
   function transferAimoInGame(uint256 amount, address to, bytes memory noteData) external  {
     Game storage game = games[round];
-    if (game.endTime == 0) {
+    GameBaseInfo storage baseInfo = game.baseInfo;
+    AiInfo storage fromAi = game.aiMap[msg.sender];
+    AiInfo storage toAi = game.aiMap[to];
+
+    if (fromAi.addr == address(0) || toAi.addr == address(0)) {
+      revert NotAiErr();
+    }
+    if (baseInfo.round == 0) {
       revert NoGameErr();
     }
-    if (game.endTime < block.timestamp) {
-      revert GameEndedErr(round);
+    if (baseInfo.endTime < block.timestamp || baseInfo.startTime > block.timestamp) {
+      revert GameEndOrNotStartErr(round);
     }
 
-    if (game.aiAgentAimoBalances[msg.sender] < amount) {
+    if (fromAi.aimoBalance < amount) {
       revert NotEnoughAimoErr(msg.sender);
     }
     unchecked {
-      game.aiAgentAimoBalances[msg.sender] -= amount;
-      game.aiAgentAimoBalances[to] += amount;
+      fromAi.aimoBalance -= amount;
+      toAi.aimoBalance += amount;
     }
 
     emit TransferAimoInGame(msg.sender, to, amount, noteData);
@@ -104,21 +127,22 @@ contract Aigame is IAigame, Ownable {
   // 在游戏结束后，管理员可以设置游戏胜利bot
   function setGameWinner(uint256 round_, address winner) external onlyOwner {
     Game storage game = games[round_];
-    if (game.endTime == 0) {
+    GameBaseInfo storage baseInfo = game.baseInfo;
+
+    if (baseInfo.endTime == 0) {
       revert NoGameErr();
     }
-    if (game.endTime >= block.timestamp) {
+    if (baseInfo.endTime >= block.timestamp) {
       revert GameNotEndErr(round_);
     }
-    if (game.isAiAgent[winner] == false) {
-      revert NotAiAgentErr();
+    if (game.aiMap[winner].addr == address(0)) {
+      revert NotAiErr();
     }
-
-    if (game.winner != address(0)) {
+    if (baseInfo.winner != address(0)) {
       revert GameWinnerAlreadySetErr(round_);
     }
     
-    game.winner = winner;
+    baseInfo.winner = winner;
     emit GameWinnerSet(round_, winner);
   }
 
@@ -151,39 +175,61 @@ contract Aigame is IAigame, Ownable {
 
 
   //=======================readers=================
-  function getGameBaseInfo(uint256 round_) external view returns (uint256, uint256, uint256, uint256, address) {
+  // 获取游戏的基本信息
+  function getGameBaseInfo(uint256 round_) external view returns (GameBaseInfo memory) {
     Game storage game  = games[round_];
-    return (game.round, game.endTime, game.initAimo, game.totalStakeAmount, game.winner);
+    return game.baseInfo;
   }
-  function getUserStakeAmount(address user, uint256 round_) external view returns (uint256) {
-    Game storage game = games[round_];
-    return game.userStakeAmounts[user][game.winner];
+  // 获取某个游戏的用户信息
+  // @return 1.是否已经领取过USDT奖金
+  // @return 2.是否已经领取过Aimo安慰奖金
+  // @return 3.ai列表
+  // @return 4.用户对每个ai的押注金额
+  function getUserInfo(address user, uint256 round_) external view returns (bool, bool,address[] memory, uint256[] memory) {
+    UserInfo storage userInfo = games[round_].userMap[user];
+    GameBaseInfo storage baseInfo = games[round_].baseInfo;
+
+    address[] memory aiList = baseInfo.aiList;
+    uint256[] memory stakeAmounts = new uint256[](baseInfo.aiList.length);
+    for (uint256 i = 0; i < baseInfo.aiList.length; i++) {
+      address ai = aiList[i];
+      stakeAmounts[i] = userInfo.stakeAmounts[ai];
+    }
+
+    return (userInfo.hasClaimedPrize, userInfo.hasClaimedAimo, aiList, stakeAmounts);
   }
-  function getAiAgentStakeAmount(address aiAgent, uint256 round_) external view returns (uint256) {
-    Game storage game = games[round_];
-    return game.aiAgentSakeAmounts[aiAgent];
-  }
-  function getAiAgentAimoBalance(address aiAgent, uint256 round_) external view returns (uint256) {
-    Game storage game = games[round_];
-    return game.aiAgentAimoBalances[aiAgent];
+  
+  // 获取某个游戏的ai信息
+  // @return 1.ai的押注金额
+  // @return 2.ai的Aimo余额
+  // @return 3.ai是否是胜利
+  function getAiInfo(address ai, uint256 round_) external view returns (uint256, uint256, bool) {
+    AiInfo storage aiInfo = games[round_].aiMap[ai];
+    GameBaseInfo storage baseInfo = games[round_].baseInfo;
+    if (aiInfo.addr == address(0)) {
+      revert NotAiErr();
+    }
+
+    return (aiInfo.stakeAmount, aiInfo.aimoBalance, aiInfo.addr == baseInfo.winner);
   }
 
 
   //=====================internal=======================
   function _claimPrize(address user,Game storage game) internal {
-    if (game.endTime == 0) {
-      revert NoGameErr();
-    }
-    if (game.winner == address(0)) {
-      revert GameWinnerNotSetErr(game.round);
-    }
-    if (game.hasClaimedPrize[user]) {
-      revert HasClaimedPrizeErr(user, game.round);
-    }
-    game.hasClaimedPrize[user] = true;
+    UserInfo storage userInfo = game.userMap[user];
 
-    uint256 prize = _calculateUserPrize(game.userStakeAmounts[user][game.winner], 
-                        game.aiAgentSakeAmounts[game.winner], game.totalStakeAmount);
+    if (game.baseInfo.winner == address(0)) {
+      revert GameWinnerNotSetErr(game.baseInfo.round);
+    }
+    if (userInfo.hasClaimedPrize) {
+      revert HasClaimedPrizeErr(user, game.baseInfo.round);
+    }
+
+    userInfo.hasClaimedPrize = true;
+    address winner = game.baseInfo.winner;
+
+    uint256 prize = _calculateUserPrize(game.userMap[user].stakeAmounts[winner], 
+                        game.aiMap[winner].stakeAmount, game.baseInfo.totalStakeAmount);
     if (prize == 0) {
       return;
     }
@@ -192,20 +238,23 @@ contract Aigame is IAigame, Ownable {
 
   // 如果失败, 领取Aimo作为安慰奖
   function _claimAimo(address user, Game storage game) internal {
-    address winner = game.winner;
+    address winner = game.baseInfo.winner;
+    UserInfo storage userInfo = game.userMap[user];
+    GameBaseInfo storage baseInfo = game.baseInfo;
+
     if (winner == address(0)) {
-      revert GameWinnerNotSetErr(game.round);
+      revert GameWinnerNotSetErr(game.baseInfo.round);
     }
-    if (game.hasClaimedAimo[user]) {
-      revert HasClaimedAimoErr(user, game.round);
+    if (userInfo.hasClaimedAimo) {
+      revert HasClaimedAimoErr(user, game.baseInfo.round);
     }
-    game.hasClaimedAimo[user] = true;
+    userInfo.hasClaimedAimo = true;
 
     uint256 totalPrize = 0;
-    for(uint256 i = 0; i < game.aiAgentList.length; i++) {
-      address aiAgent = game.aiAgentList[i];
-      uint256 prize = _calculateUserGotAimo(game.userStakeAmounts[user][aiAgent],
-                        game.aiAgentSakeAmounts[aiAgent], game.aiAgentAimoBalances[aiAgent]);
+    for(uint256 i = 0; i < baseInfo.aiList.length; i++) {
+      address ai = baseInfo.aiList[i];
+      uint256 prize = _calculateUserGotAimo(userInfo.stakeAmounts[ai],
+                        game.aiMap[ai].stakeAmount, game.aiMap[ai].aimoBalance);
       totalPrize += prize;
     }
     aimo.mint(user, totalPrize);
