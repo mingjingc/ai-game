@@ -9,14 +9,15 @@ import {USDT} from "src/tokens/Usdt.sol";
 
 contract DeployBaseSepoliaTestnet is Script {
     function run() external {
-        address owner = msg.sender;
+        address sender = msg.sender;
+        address owner = 0x14FdF30C64DB6bF32199d983Bcb3f73BfD3E3C18;
         console.log("Deploying to Sepolia Testnet, owner: ", owner);
         vm.startBroadcast();
 
         USDT usdt = new USDT();
         console.log("USDT deployed at: ", address(usdt));
 
-        Aimo aimo = new Aimo(owner);
+        Aimo aimo = new Aimo(sender);
         console.log("Aimo deployed at: ", address(aimo));
 
         AifeeProtocol aifeeProtocol = new AifeeProtocol(
@@ -37,6 +38,8 @@ contract DeployBaseSepoliaTestnet is Script {
 
         aimo.changeAdmin(address(aigame));
         console.log("Aimo admin changed to: ", address(aigame));
+        aimo.transferOwnership(owner);
+        console.log("Aimo owner changed to: ", owner);
 
         vm.stopBroadcast();
     }

@@ -9,11 +9,12 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
     bytes32 private constant INVITE_TYPEHASH =
-        keccak256("Invite(address inviter,user address,uint256 nonce,uint256 deadline)");
-
+        keccak256(
+            "Invite(address inviter,user address,uint256 nonce,uint256 deadline)"
+        );
 
     uint256 public constant rateBase = 1e4; // minimum 0.01 percent
-    address public feeToken;
+    IERC20 public feeToken;
     uint256 public feeRate; // 0.01 percent
     uint256 public inviterIncomeRate; // 0.01 percent
 
@@ -33,33 +34,39 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
         uint256 feeRate_,
         uint256 inviterIncomeRate_
     ) Ownable(owner_) EIP712("AifeeProtocol", "1") {
-        feeToken = feeToken_;
+        feeToken = IERC20(feeToken_);
         feeRate = feeRate_;
         inviterIncomeRate = inviterIncomeRate_;
     }
 
     // 更新手续费率
     // @param feeRate_ 手续费率，
-    function updateFeeRate(uint256 feeRate_) external onlyOwner {
+    // @param inviterIncomeRate_ 邀请人收益率
+    function updateFeeRate(uint256 feeRate_, uint256 inviterIncomeRate_) external onlyOwner {
         feeRate = feeRate_;
+        inviterIncomeRate = inviterIncomeRate_;
     }
 
-    // 收取手续费，这个方法由Aigame合约调用。当然其他人调用免费送钱也是可以的，但是不推荐。
+    // 手续费结算
     // @param token 手续费代币地址
     // @param user 实际交手续的用户
     // @param amount 交手续费的金额
-    function collectFee(address token, address user, uint256 amount) external {
-        if (token != feeToken) {
-            revert FeeTokenNotSupportedErr();
-        }
-
+    function settleFee(
+        address user,
+        uint256 amount
+    ) external {
         address inviter = inviters[user];
         if (inviter != address(0)) {
-            uint256 inviterIncomeAmount = amount * inviterIncomeRate / rateBase;
-            inviterIncome[inviter] += inviterIncomeAmount;
+            uint256 inviterIncomeAmount = (amount * inviterIncomeRate) /
+                rateBase;
+            feeToken.transferFrom(msg.sender, inviter, inviterIncomeAmount);
+            emit InviterGotProfit(inviter, user, inviterIncomeAmount);
+
+            // 扣去邀请人的提成
+            amount -= inviterIncomeAmount;
         }
 
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        feeToken.transferFrom(msg.sender, address(this), amount);
     }
 
     // 绑定邀请关系，在去中心化世界中，需要你邀请人的签名。
@@ -71,7 +78,13 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
     // @param s 签名s值
     // @dev 签名数据是由用户签名的，用户签名的数据是：INVITE_TYPEHASH(inviter,user,nonce,deadline)
     // @dev 签名数据的hash是：keccak256(abi.encode(INVITE_TYPEHASH, inviter, user, nonce, deadline))，符合EIP712的标准
-    function inviteUser(address user,uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
+    function inviteUser(
+        address user,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
         if (deadline < block.timestamp) {
             revert ERC2612ExpiredSignatureErr(deadline);
         }
@@ -81,7 +94,9 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
 
         uint256 nonce = _useNonce(user);
         address inviter = msg.sender;
-        bytes32 structHash = keccak256(abi.encode(INVITE_TYPEHASH, inviter, user, nonce, deadline));
+        bytes32 structHash = keccak256(
+            abi.encode(INVITE_TYPEHASH, inviter, user, nonce, deadline)
+        );
         bytes32 hash = _hashTypedDataV4(structHash);
         address signer = ECDSA.recover(hash, v, r, s);
 
@@ -91,18 +106,15 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
         inviters[user] = inviter;
     }
 
-    // 领取邀收益
-    function claimIncome(address user) external {
-        uint256 amount = inviterIncome[user];
-        inviterIncome[user] = 0;
-        
-        IERC20(feeToken).transfer(msg.sender, amount);
-        emit ClaimedIncome(user, amount);
-    }
+    function claimAllIncome(address to) external onlyOwner {
+        uint256 amount = IERC20(feeToken).balanceOf(address(this));
+        IERC20(feeToken).transfer(to, amount);
 
+        emit ClaimedAllIncome(to, amount);
+    }
 
     //==========================readers=====================
     function calcuateFee(uint256 stakeAmount) external view returns (uint256) {
-        return stakeAmount * feeRate / rateBase;
+        return (stakeAmount * feeRate) / rateBase;
     }
 }

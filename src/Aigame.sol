@@ -82,8 +82,8 @@ contract Aigame is IAigame, Ownable {
     usdt.transferFrom(user, address(this), amount);
     uint256 fee = aifeeProtocol.calcuateFee(amount);
     if (fee > 0) {
-      // 手续费协议收取手续费
-      aifeeProtocol.collectFee(address(usdt), user, fee);
+      usdt.approve(address(aifeeProtocol), fee);
+      aifeeProtocol.settleFee(user, fee);
     }
     amount = amount - fee; // 扣除手续费, 实际押注的金额
 
