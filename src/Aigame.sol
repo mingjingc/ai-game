@@ -10,8 +10,8 @@ contract Aigame is IAigame, Ownable {
   IERC20 public usdt;
   IBaseToken public aimo; // Aimo token
   IAifeeProtocol public aifeeProtocol;
-  uint256 minStakeAmount = 10 * 1e6;
-  uint256 maxStakeAmount = 5000 * 1e6;
+  uint256 constant public minStakeAmount = 10 * 1e6;
+  uint256 constant public maxStakeAmount = 5000 * 1e6;
 
   mapping(uint256 => Game) private games;
   uint256 public round;
@@ -153,7 +153,7 @@ contract Aigame is IAigame, Ownable {
     }
     
     baseInfo.winner = winner;
-    emit GameWinnerSet(round_, winner);
+    emit GameWinnerSetted(round_, winner);
   }
 
   // 押注胜利者可以领取 USDT 奖金

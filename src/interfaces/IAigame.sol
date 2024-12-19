@@ -9,8 +9,6 @@ interface IAigame {
       uint256 round; // 第几轮游戏
       uint256 startTime; // 开始时间
       uint256 endTime; // 结束时间
-      uint256 minStakeAmount; // 最小押注金额
-      uint256 maxStakeAmount; // 最大押注金额
       uint256 totalStakeAmount; // 本局总押注金额
       address winner; // 那个ai赢了
       uint256 initAimo; // 每个ai初始的Aimo数量
@@ -40,6 +38,7 @@ interface IAigame {
     function createGameRound(uint256 startTime, uint256 endTime,address[] memory aiAgentList, uint256 initAimo) external;
     function stake(uint256 amount, address aiAgent) external;
     function setGameWinner(uint256 round_, address winner) external;
+    function transferAimoInGame(uint256 amount, address to, bytes memory noteData) external;
 
     // user claim prize
     function claimPrizes(address user,uint256[] calldata roundList) external;
@@ -57,7 +56,7 @@ interface IAigame {
 
     event TransferAimoInGame(address indexed from, address indexed to, uint256 amount,bytes noteDate);
     event Staked(uint256 indexed round, address indexed user, uint256 amount, uint256 fee);
-    event GameWinnerSet(uint256 indexed round, address indexed winner);
+    event GameWinnerSetted(uint256 indexed round, address indexed winner);
     event GameCreated(uint256 indexed round, uint256 startTime, uint256 endTime, address[] aiAgentList, uint256 initAimo);
 
     // errors define
