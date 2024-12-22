@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
+
 import {IAifeeProtocol} from "./interfaces/IAifeeProtocol.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -9,9 +10,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
     bytes32 private constant INVITE_TYPEHASH =
-        keccak256(
-            "Invite(address inviter,user address,uint256 nonce,uint256 deadline)"
-        );
+        keccak256("Invite(address inviter,user address,uint256 nonce,uint256 deadline)");
 
     uint256 public constant rateBase = 1e4; // minimum 0.01 percent
     IERC20 public feeToken;
@@ -28,13 +27,11 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
     // @param feeRate_ 手续费率，百分比，小数位是2。如feeRate_ = 100，手续费率是100/10000 = 0.01, 表示1%手续费率
     // 如果是手续费率0.01%，则feeRate_ = 1，因为1/1e4 = 0.0001 = 0.01%
     // @param inviterIncomeRate_ 邀请人收益率，百分比，如上
-    constructor(
-        address owner_,
-        address feeToken_,
-        uint256 feeRate_,
-        uint256 inviterIncomeRate_
-    ) Ownable(owner_) EIP712("AifeeProtocol", "1") {
-        feeToken = IERC20(feeToken_);
+    constructor(address owner_, IERC20 feeToken_, uint256 feeRate_, uint256 inviterIncomeRate_)
+        Ownable(owner_)
+        EIP712("AifeeProtocol", "1")
+    {
+        feeToken = feeToken_;
         feeRate = feeRate_;
         inviterIncomeRate = inviterIncomeRate_;
     }
@@ -51,14 +48,10 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
     // @param token 手续费代币地址
     // @param user 实际交手续的用户
     // @param amount 交手续费的金额
-    function settleFee(
-        address user,
-        uint256 amount
-    ) external {
+    function settleFee(address user, uint256 amount) external {
         address inviter = inviters[user];
         if (inviter != address(0)) {
-            uint256 inviterIncomeAmount = (amount * inviterIncomeRate) /
-                rateBase;
+            uint256 inviterIncomeAmount = (amount * inviterIncomeRate) / rateBase;
             feeToken.transferFrom(msg.sender, inviter, inviterIncomeAmount);
             emit InviterGotProfit(inviter, user, inviterIncomeAmount);
 
@@ -78,13 +71,7 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
     // @param s 签名s值
     // @dev 签名数据是由用户签名的，用户签名的数据是：INVITE_TYPEHASH(inviter,user,nonce,deadline)
     // @dev 签名数据的hash是：keccak256(abi.encode(INVITE_TYPEHASH, inviter, user, nonce, deadline))，符合EIP712的标准
-    function inviteUser(
-        address user,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
+    function inviteUser(address user, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
         if (deadline < block.timestamp) {
             revert ERC2612ExpiredSignatureErr(deadline);
         }
@@ -94,9 +81,7 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
 
         uint256 nonce = _useNonce(user);
         address inviter = msg.sender;
-        bytes32 structHash = keccak256(
-            abi.encode(INVITE_TYPEHASH, inviter, user, nonce, deadline)
-        );
+        bytes32 structHash = keccak256(abi.encode(INVITE_TYPEHASH, inviter, user, nonce, deadline));
         bytes32 hash = _hashTypedDataV4(structHash);
         address signer = ECDSA.recover(hash, v, r, s);
 
