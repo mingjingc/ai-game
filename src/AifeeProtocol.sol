@@ -27,11 +27,11 @@ contract AifeeProtocol is IAifeeProtocol, Ownable, EIP712, Nonces {
     // @param feeRate_ 手续费率，百分比，小数位是2。如feeRate_ = 100，手续费率是100/10000 = 0.01, 表示1%手续费率
     // 如果是手续费率0.01%，则feeRate_ = 1，因为1/1e4 = 0.0001 = 0.01%
     // @param inviterIncomeRate_ 邀请人收益率，百分比，如上
-    constructor(address owner_, IERC20 feeToken_, uint256 feeRate_, uint256 inviterIncomeRate_)
+    constructor(address owner_, address feeToken_, uint256 feeRate_, uint256 inviterIncomeRate_)
         Ownable(owner_)
         EIP712("AifeeProtocol", "1")
     {
-        feeToken = feeToken_;
+        feeToken = IERC20(feeToken_);
         feeRate = feeRate_;
         inviterIncomeRate = inviterIncomeRate_;
     }

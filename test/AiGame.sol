@@ -26,8 +26,8 @@ contract AigameTest is Test {
     function setUp() public {
         usdt = new USDT();
         aimo = new Aimo(owner);
-        aifee = new AifeeProtocol(owner, usdt, 100, 100);
-        aigame = new Aigame(aifee, usdt, aimo, owner);
+        aifee = new AifeeProtocol(owner, address(usdt), 100, 100);
+        aigame = new Aigame(address(aifee), address(usdt), address(aimo), owner);
 
         vm.startPrank(owner);
         aimo.changeAdmin(address(aigame));

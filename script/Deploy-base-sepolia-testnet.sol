@@ -20,10 +20,10 @@ contract DeployBaseSepoliaTestnet is Script {
         Aimo aimo = new Aimo(sender);
         console.log("Aimo deployed at: ", address(aimo));
 
-        AifeeProtocol aifeeProtocol = new AifeeProtocol(owner, usdt, 100, 100);
+        AifeeProtocol aifeeProtocol = new AifeeProtocol(owner, address(usdt), 100, 100);
         console.log("AifeeProtocol deployed at: ", address(aifeeProtocol));
 
-        Aigame aigame = new Aigame(aifeeProtocol, usdt, aimo, owner);
+        Aigame aigame = new Aigame(address(aifeeProtocol), address(usdt), address(aimo), owner);
         console.log("Aigame deployed at: ", address(aigame));
 
         aimo.changeAdmin(address(aigame));

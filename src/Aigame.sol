@@ -21,7 +21,7 @@ contract Aigame is IAigame, Ownable {
     // @param usdt USDT合约地址
     // @param aimo Aimo合约地址
     // @param owner 管理员地址
-    constructor(IAifeeProtocol aifeeProtocol_, IERC20 usdt_, IBaseToken aimo_, address owner_) Ownable(owner_) {
+    constructor(address aifeeProtocol_, address usdt_, address aimo_, address owner_) Ownable(owner_) {
         aifeeProtocol = IAifeeProtocol(aifeeProtocol_);
         usdt = IERC20(usdt_);
         aimo = IBaseToken(aimo_);
