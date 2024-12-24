@@ -251,7 +251,9 @@ contract Aigame is IAigame, Ownable {
         if (prize == 0) {
             return;
         }
+
         usdt.transfer(user, prize);
+        emit PrizeClaimed(user, game.baseInfo.round, prize);
     }
 
     // 如果失败, 领取Aimo作为安慰奖
@@ -275,7 +277,9 @@ contract Aigame is IAigame, Ownable {
                 _calculateUserGotAimo(userInfo.stakeAmounts[ai], game.aiMap[ai].stakeAmount, game.aiMap[ai].aimoBalance);
             totalPrize += prize;
         }
+
         aimo.mint(user, totalPrize);
+        emit AimoClaimed(user, game.baseInfo.round, totalPrize);
     }
 
     function _calculateUserGotAimo(uint256 userStakeAmount, uint256 agentAiStakeAmount, uint256 agentAiAimo)

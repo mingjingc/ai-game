@@ -66,6 +66,8 @@ interface IAigame {
     event GameCreated(
         uint256 indexed round, uint256 startTime, uint256 endTime, address[] aiAgentList, uint256 initAimo
     );
+    event PrizeClaimed(address indexed user, uint256 indexed round, uint256 amount);
+    event AimoClaimed(address indexed user, uint256 indexed round, uint256 amount);
 
     // errors define
     error NoGameErr();
