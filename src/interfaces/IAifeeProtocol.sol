@@ -8,7 +8,7 @@ interface IAifeeProtocol {
     function settleFee(address user, uint256 amount) external;
     function rateBase() external pure returns (uint256);
 
-    function inviteUser(address user, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external;
+    function registerWithInviter(address inviter) external;
     function claimAllIncome(address to) external;
 
     event ClaimedAllIncome(address indexed to, uint256 amount);
