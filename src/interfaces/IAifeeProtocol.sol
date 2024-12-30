@@ -15,7 +15,6 @@ interface IAifeeProtocol {
     event InviterGotProfit(address indexed inviter, address indexed user, uint256 amount);
 
     error FeeTokenNotSupportedErr();
-    error UserNotAggreeInvitationErr();
-    error ERC2612ExpiredSignatureErr(uint256 deadline);
     error InvitationRelationshipAlreadyExistErr(address user);
+    error CannotInviteSelfErr();
 }

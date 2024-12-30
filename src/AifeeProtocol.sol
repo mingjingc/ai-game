@@ -62,6 +62,10 @@ contract AifeeProtocol is IAifeeProtocol, Ownable {
         if (inviters[user] != address(0)) {
             revert InvitationRelationshipAlreadyExistErr(user);
         }
+        if (inviter == user) {
+            revert CannotInviteSelfErr();
+        }
+
         inviters[user] = inviter;
     }
 
